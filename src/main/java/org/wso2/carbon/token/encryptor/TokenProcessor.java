@@ -17,12 +17,15 @@
  */
 
 package org.wso2.carbon.token.encryptor;
+
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.core.util.CryptoException;
 import org.wso2.carbon.core.util.CryptoUtil;
 
 import java.nio.charset.Charset;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Encrypt given value using Crypto Utils.
@@ -41,5 +44,16 @@ public class TokenProcessor {
         String convertedToken = CryptoUtil.getDefaultCryptoUtil().encryptAndBase64Encode(convertedByteToken);
         log.info("Encoded : " + convertedToken);
         return convertedToken;
+    }
+
+    public static boolean isBase64Encoded(String value) {
+        String pattern = "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$";
+
+        // Create a Pattern object
+        Pattern r = Pattern.compile(pattern);
+
+        // Now create matcher object.
+        Matcher m = r.matcher(value);
+        return m.find();
     }
 }

@@ -20,7 +20,6 @@ package org.wso2.carbon.token.encryptor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.core.util.CryptoException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -28,8 +27,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import static org.wso2.carbon.token.encryptor.TokenProcessor.isBase64Encoded;
 
 /**
  * Class to manipulate db related operations.
@@ -57,6 +58,11 @@ public class DbUtils {
      * Update query to save encrypted client access and refresh token.
      */
     private final String updateQueryAccessTokens = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET ACCESS_TOKEN = ?, REFRESH_TOKEN = ? WHERE TOKEN_ID = ?";
+
+
+    private final String selectQueryAuthorizationCodes = "SELECT CODE_ID, AUTHORIZATION_CODE FROM IDN_OAUTH2_AUTHORIZATION_CODE";
+
+    private final String updateQueryAuthorizationCodes = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET AUTHORIZATION_CODE = ? WHERE CODE_ID = ?";
 
     /**
      * Database connection.
@@ -99,6 +105,28 @@ public class DbUtils {
     }
 
     /**
+     * Get authorization codes from database.
+     * @return
+     */
+    public List<IdnAuthorizationCode> getAUthorizationCodeList() {
+        try (Statement statement = databaseConnection.createStatement();
+             ResultSet resultSet = statement.executeQuery(selectQueryAuthorizationCodes)) {
+            List<IdnAuthorizationCode> authrorizationCodes = new ArrayList<>();
+            while(resultSet.next()) {
+                IdnAuthorizationCode temp = new IdnAuthorizationCode();
+                temp.setId(resultSet.getString("CODE_ID"));
+                temp.setAuthorizationCode(resultSet.getString("AUTHORIZATION_CODE"));
+                authrorizationCodes.add(temp);
+            }
+            return authrorizationCodes;
+        } catch (SQLException e) {
+            log.error("Unable to execute query");
+            e.printStackTrace();
+            return Collections.emptyList();
+        }
+    }
+
+    /**
      * Get list of applications with client secret.
      * @return
      */
@@ -134,7 +162,11 @@ public class DbUtils {
             for(IdnOauthApplication tempapp : idnOauthApplicationList) {
                 String convertedToken = null;
                 try {
-                    convertedToken = TokenProcessor.getEncryptedToken(tempapp.getClientSecreat());
+                    if (!isBase64Encoded(tempapp.getClientSecreat())) {
+                        convertedToken = TokenProcessor.getEncryptedToken(tempapp.getClientSecreat());
+                    } else {
+                        convertedToken = tempapp.getClientSecreat();
+                    }
                     databaseConnection.setAutoCommit(false);
                     statement.setString(1,convertedToken);
                     statement.setString(2,tempapp.getId());
@@ -165,8 +197,20 @@ public class DbUtils {
             PreparedStatement statement = databaseConnection.prepareStatement(updateQueryAccessTokens);
             for(IdnAccessToken temptokens : idnAccessTokens) {
                 try {
-                    String convertedaccessToken = TokenProcessor.getEncryptedToken(temptokens.getAccessToken());
-                    String convertedrefreshToken = TokenProcessor.getEncryptedToken(temptokens.getRefreshToken());
+                    String convertedaccessToken;
+                    String convertedrefreshToken;
+
+                    if (!isBase64Encoded(temptokens.getAccessToken())) {
+                        convertedaccessToken = TokenProcessor.getEncryptedToken(temptokens.getAccessToken());
+                    } else {
+                        convertedaccessToken = temptokens.getAccessToken();
+                    }
+
+                    if (!isBase64Encoded(temptokens.getRefreshToken())) {
+                        convertedrefreshToken = TokenProcessor.getEncryptedToken(temptokens.getRefreshToken());
+                    } else {
+                        convertedrefreshToken = temptokens.getRefreshToken();
+                    }
                     databaseConnection.setAutoCommit(false);
                     statement.setString(1,convertedaccessToken);
                     statement.setString(2,convertedrefreshToken);
@@ -181,6 +225,37 @@ public class DbUtils {
             databaseConnection.commit();
             log.info("Tokens Converted :" +execution);
         } catch (SQLException e) {
+            log.error("Unable to update Tokens ");
+            databaseConnection.rollback();
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Encrypt and save authorization codes.
+     * @param authorizationCodes
+     * @throws SQLException
+     */
+    public void saveAuthorizationCodes(List<IdnAuthorizationCode> authorizationCodes) throws SQLException {
+        try (PreparedStatement statement = databaseConnection.prepareStatement(updateQueryAuthorizationCodes)) {
+            for(IdnAuthorizationCode authorizationcode : authorizationCodes) {
+                    String encryptedAuthorizationCodes;
+
+                    if (!isBase64Encoded(authorizationcode.getAuthorizationCode())) {
+                        encryptedAuthorizationCodes =
+                                TokenProcessor.getEncryptedToken(authorizationcode.getAuthorizationCode());
+                    } else {
+                        encryptedAuthorizationCodes = authorizationcode.getAuthorizationCode();
+                    }
+                    databaseConnection.setAutoCommit(false);
+                    statement.setString(1, encryptedAuthorizationCodes);
+                    statement.setString(2, authorizationcode.getId());
+                    statement.addBatch();
+            }
+            int [] execution = statement.executeBatch();
+            databaseConnection.commit();
+            log.info("Tokens Converted :" +execution);
+        } catch (Exception e) {
             log.error("Unable to update Tokens ");
             databaseConnection.rollback();
             e.printStackTrace();
