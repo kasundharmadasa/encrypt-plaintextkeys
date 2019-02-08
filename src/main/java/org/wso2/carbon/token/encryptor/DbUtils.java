@@ -27,7 +27,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.wso2.carbon.token.encryptor.TokenProcessor.isBase64Encoded;
@@ -59,7 +58,6 @@ public class DbUtils {
      */
     private final String updateQueryAccessTokens = "UPDATE IDN_OAUTH2_ACCESS_TOKEN SET ACCESS_TOKEN = ?, REFRESH_TOKEN = ? WHERE TOKEN_ID = ?";
 
-
     private final String selectQueryAuthorizationCodes = "SELECT CODE_ID, AUTHORIZATION_CODE FROM IDN_OAUTH2_AUTHORIZATION_CODE";
 
     private final String updateQueryAuthorizationCodes = "UPDATE IDN_OAUTH2_AUTHORIZATION_CODE SET AUTHORIZATION_CODE = ? WHERE CODE_ID = ?";
@@ -71,6 +69,7 @@ public class DbUtils {
 
     /**
      * Constructor.
+     *
      * @param databaseConnection
      */
     public DbUtils(Connection databaseConnection) {
@@ -80,39 +79,39 @@ public class DbUtils {
 
     /**
      * Get tokens from database.
+     *
      * @return
      */
-    public List<IdnAccessToken> getAccessTokenList()
-    {
-        try {
-            Statement statement = databaseConnection.createStatement();
-            ResultSet resultSet = statement.executeQuery(selectQueryAccessTokens);
-            List<IdnAccessToken> accessTokens = new ArrayList<>();
-            while(resultSet.next())
-            {
+    public List<IdnAccessToken> getAccessTokenList() {
+
+        List<IdnAccessToken> accessTokens = new ArrayList<>();
+
+        try (Statement statement = databaseConnection.createStatement();
+             ResultSet resultSet = statement.executeQuery(selectQueryAccessTokens)) {
+            while (resultSet.next()) {
                 IdnAccessToken temp = new IdnAccessToken();
                 temp.setId(resultSet.getString("TOKEN_ID"));
                 temp.setAccessToken(resultSet.getString("ACCESS_TOKEN"));
                 temp.setRefreshToken(resultSet.getString("REFRESH_TOKEN"));
                 accessTokens.add(temp);
             }
-            return accessTokens;
         } catch (SQLException e) {
-            log.error("Unable to execute query");
-            e.printStackTrace();
-            return null;
+            log.error("Unable to retrieve the access token list", e);
         }
+        return accessTokens;
     }
 
     /**
      * Get authorization codes from database.
+     *
      * @return
      */
-    public List<IdnAuthorizationCode> getAUthorizationCodeList() {
+    public List<IdnAuthorizationCode> getAuthorizationCodeList() {
+
         try (Statement statement = databaseConnection.createStatement();
              ResultSet resultSet = statement.executeQuery(selectQueryAuthorizationCodes)) {
             List<IdnAuthorizationCode> authrorizationCodes = new ArrayList<>();
-            while(resultSet.next()) {
+            while (resultSet.next()) {
                 IdnAuthorizationCode temp = new IdnAuthorizationCode();
                 temp.setId(resultSet.getString("CODE_ID"));
                 temp.setAuthorizationCode(resultSet.getString("AUTHORIZATION_CODE"));
@@ -120,82 +119,78 @@ public class DbUtils {
             }
             return authrorizationCodes;
         } catch (SQLException e) {
-            log.error("Unable to execute query");
-            e.printStackTrace();
-            return Collections.emptyList();
+            log.error("Unable to retrieve authorization codes", e);
         }
     }
 
     /**
      * Get list of applications with client secret.
+     *
      * @return
      */
-    public List<IdnOauthApplication> getOauthAppsList()
-    {
-        try {
-            Statement statement = databaseConnection.createStatement();
-            ResultSet resultSet = statement.executeQuery(selectQueryOauthApps);
-            List<IdnOauthApplication> apps = new ArrayList<>();
-            while(resultSet.next())
-            {
+    public List<IdnOauthApplication> getOauthAppsList() {
+
+        List<IdnOauthApplication> apps = new ArrayList<>();
+
+        try (Statement statement = databaseConnection.createStatement();
+             ResultSet resultSet = statement.executeQuery(selectQueryOauthApps)) {
+            while (resultSet.next()) {
                 IdnOauthApplication temp = new IdnOauthApplication();
                 temp.setId(resultSet.getString("CONSUMER_KEY"));
-                temp.setClientSecreat(resultSet.getString("CONSUMER_SECRET"));
+                temp.setClientSecret(resultSet.getString("CONSUMER_SECRET"));
                 apps.add(temp);
             }
-            return apps;
         } catch (SQLException e) {
-            log.error("Unable to execute query");
-            e.printStackTrace();
-            return null;
+            log.error("Unable to retrieve Oauth consumer app list", e);
         }
+        return apps;
     }
 
     /**
      * Encrypt and save client secrets.
+     *
      * @param idnOauthApplicationList
      * @throws SQLException
      */
     public void saveClientSecret(List<IdnOauthApplication> idnOauthApplicationList) throws SQLException {
-        try {
-            PreparedStatement statement = databaseConnection.prepareStatement(updateQueryOauthApps);
-            for(IdnOauthApplication tempapp : idnOauthApplicationList) {
+
+        try (PreparedStatement statement = databaseConnection.prepareStatement(updateQueryOauthApps)) {
+            for (IdnOauthApplication tempapp : idnOauthApplicationList) {
                 String convertedToken = null;
                 try {
-                    if (!isBase64Encoded(tempapp.getClientSecreat())) {
-                        convertedToken = TokenProcessor.getEncryptedToken(tempapp.getClientSecreat());
+                    if (!isBase64Encoded(tempapp.getClientSecret())) {
+                        convertedToken = TokenProcessor.getEncryptedToken(tempapp.getClientSecret());
                     } else {
-                        convertedToken = tempapp.getClientSecreat();
+                        convertedToken = tempapp.getClientSecret();
                     }
                     databaseConnection.setAutoCommit(false);
-                    statement.setString(1,convertedToken);
-                    statement.setString(2,tempapp.getId());
+                    statement.setString(1, convertedToken);
+                    statement.setString(2, tempapp.getId());
                     statement.addBatch();
                 } catch (Exception e) {
-                    log.error("Unable to encrypt Client secrets ");
-                    e.printStackTrace();
+                    log.error("Unable to encrypt Client secrets.", e);
                     databaseConnection.rollback();
                 }
             }
-            int [] execution = statement.executeBatch();
+            int[] execution = statement.executeBatch();
             databaseConnection.commit();
-            log.info("Client Secrets Converted :" +execution);
+            log.info("Client Secrets Converted : " + execution);
         } catch (SQLException e) {
-            log.error("Unable to update Client secrets ");
-            e.printStackTrace();
+            log.error("Unable to update Client secrets ", e);
             databaseConnection.rollback();
         }
     }
 
     /**
      * Encrypt and save access and refresh tokens.
+     *
      * @param idnAccessTokens
      * @throws SQLException
      */
     public void saveApplicationTokens(List<IdnAccessToken> idnAccessTokens) throws SQLException {
-        try {
-            PreparedStatement statement = databaseConnection.prepareStatement(updateQueryAccessTokens);
-            for(IdnAccessToken temptokens : idnAccessTokens) {
+
+        try (PreparedStatement statement = databaseConnection.prepareStatement(updateQueryAccessTokens)) {
+            for (IdnAccessToken temptokens : idnAccessTokens) {
                 try {
                     String convertedaccessToken;
                     String convertedrefreshToken;
@@ -212,53 +207,52 @@ public class DbUtils {
                         convertedrefreshToken = temptokens.getRefreshToken();
                     }
                     databaseConnection.setAutoCommit(false);
-                    statement.setString(1,convertedaccessToken);
-                    statement.setString(2,convertedrefreshToken);
-                    statement.setString(3,temptokens.getId());
+                    statement.setString(1, convertedaccessToken);
+                    statement.setString(2, convertedrefreshToken);
+                    statement.setString(3, temptokens.getId());
                     statement.addBatch();
                 } catch (Exception e) {
-                    log.error("Unable to encrypt Client secrets ");
-                    e.printStackTrace();
+                    log.error("Unable to encrypt Oauth2 tokens.", e);
                 }
             }
-            int [] execution = statement.executeBatch();
+            int[] execution = statement.executeBatch();
             databaseConnection.commit();
-            log.info("Tokens Converted :" +execution);
+            log.info("Tokens Converted :" + execution);
         } catch (SQLException e) {
-            log.error("Unable to update Tokens ");
+            log.error("Unable to update Oauth2 tokens.", e);
             databaseConnection.rollback();
-            e.printStackTrace();
         }
     }
 
     /**
      * Encrypt and save authorization codes.
+     *
      * @param authorizationCodes
      * @throws SQLException
      */
     public void saveAuthorizationCodes(List<IdnAuthorizationCode> authorizationCodes) throws SQLException {
-        try (PreparedStatement statement = databaseConnection.prepareStatement(updateQueryAuthorizationCodes)) {
-            for(IdnAuthorizationCode authorizationcode : authorizationCodes) {
-                    String encryptedAuthorizationCodes;
 
-                    if (!isBase64Encoded(authorizationcode.getAuthorizationCode())) {
-                        encryptedAuthorizationCodes =
-                                TokenProcessor.getEncryptedToken(authorizationcode.getAuthorizationCode());
-                    } else {
-                        encryptedAuthorizationCodes = authorizationcode.getAuthorizationCode();
-                    }
-                    databaseConnection.setAutoCommit(false);
-                    statement.setString(1, encryptedAuthorizationCodes);
-                    statement.setString(2, authorizationcode.getId());
-                    statement.addBatch();
+        try (PreparedStatement statement = databaseConnection.prepareStatement(updateQueryAuthorizationCodes)) {
+            for (IdnAuthorizationCode authorizationCode : authorizationCodes) {
+                String encryptedAuthorizationCodes;
+
+                if (!isBase64Encoded(authorizationCode.getAuthorizationCode())) {
+                    encryptedAuthorizationCodes =
+                            TokenProcessor.getEncryptedToken(authorizationCode.getAuthorizationCode());
+                } else {
+                    encryptedAuthorizationCodes = authorizationCode.getAuthorizationCode();
+                }
+                databaseConnection.setAutoCommit(false);
+                statement.setString(1, encryptedAuthorizationCodes);
+                statement.setString(2, authorizationCode.getId());
+                statement.addBatch();
             }
-            int [] execution = statement.executeBatch();
+            int[] execution = statement.executeBatch();
             databaseConnection.commit();
-            log.info("Tokens Converted :" +execution);
+            log.info("Authorization codes converted :" + execution);
         } catch (Exception e) {
-            log.error("Unable to update Tokens ");
+            log.error("Unable to update Oauth2 authorization codes.", e);
             databaseConnection.rollback();
-            e.printStackTrace();
         }
     }
 

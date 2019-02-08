@@ -20,7 +20,7 @@ package org.wso2.carbon.token.encryptor;
 
 public class IdnOauthApplication {
     private String id;
-    private String clientSecreat;
+    private String clientSecret;
 
     public String getId() {
         return id;
@@ -30,11 +30,11 @@ public class IdnOauthApplication {
         this.id = id;
     }
 
-    public String getClientSecreat() {
-        return clientSecreat;
+    public String getClientSecret() {
+        return clientSecret;
     }
 
-    public void setClientSecreat(String clientSecreat) {
-        this.clientSecreat = clientSecreat;
+    public void setClientSecret(String clientSecret) {
+        this.clientSecret = clientSecret;
     }
 }

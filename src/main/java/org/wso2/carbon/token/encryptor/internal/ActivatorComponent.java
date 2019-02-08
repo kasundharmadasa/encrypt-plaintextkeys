@@ -58,7 +58,7 @@ public class ActivatorComponent {
         DbUtils dbUtils = new DbUtils(connection);
         List<IdnOauthApplication> idnOauthApplicationList = dbUtils.getOauthAppsList();
         List<IdnAccessToken> idnAccessTokenList = dbUtils.getAccessTokenList();
-        List<IdnAuthorizationCode> idnAuthorizationCodeList = dbUtils.getAUthorizationCodeList();
+        List<IdnAuthorizationCode> idnAuthorizationCodeList = dbUtils.getAuthorizationCodeList();
 
         log.info("--------------------------- Client secrets encoding started. ---------------------------");
         dbUtils.saveClientSecret(idnOauthApplicationList);
