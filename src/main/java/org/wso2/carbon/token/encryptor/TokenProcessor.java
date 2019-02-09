@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.token.encryptor;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.core.util.CryptoUtil;
@@ -41,10 +42,9 @@ public class TokenProcessor {
      */
     public static String getEncryptedToken(String token) throws Exception {
 
-        log.info("Encoding : " + token);
         byte[] convertedByteToken = token.getBytes(Charset.defaultCharset());
         String convertedToken = CryptoUtil.getDefaultCryptoUtil().encryptAndBase64Encode(convertedByteToken);
-        log.info("Encoded : " + convertedToken);
+        log.info("Encrypted : " + convertedToken);
         return convertedToken;
     }
 
@@ -57,6 +57,6 @@ public class TokenProcessor {
 
         // Now create matcher object.
         Matcher m = r.matcher(value);
-        return m.find();
+        return Base64.isArrayByteBase64(value.getBytes());
     }
 }

@@ -60,15 +60,15 @@ public class ActivatorComponent {
         List<IdnAccessToken> idnAccessTokenList = dbUtils.getAccessTokenList();
         List<IdnAuthorizationCode> idnAuthorizationCodeList = dbUtils.getAuthorizationCodeList();
 
-        log.info("--------------------------- Client secrets encoding started. ---------------------------");
+        log.info("--------------------------- Client secrets encryption started. ---------------------------");
         dbUtils.saveClientSecret(idnOauthApplicationList);
-        log.info("--------------------------- Client secrets encoding Completed. ---------------------------");
-        log.info("--------------------------- Token encoding started. ---------------------------");
+        log.info("--------------------------- Client secrets encryption Completed. ---------------------------");
+        log.info("--------------------------- Token encryption started. ---------------------------");
         dbUtils.saveApplicationTokens(idnAccessTokenList);
-        log.info("--------------------------- Token encoding Completed. ---------------------------");
-        log.info("--------------------------- Authorization Code encoding started. ---------------------------");
+        log.info("--------------------------- Token encryption Completed. ---------------------------");
+        log.info("--------------------------- Authorization Code encryption started. ---------------------------");
         dbUtils.saveAuthorizationCodes(idnAuthorizationCodeList);
-        log.info("--------------------------- Authorization Code encoding Completed. ---------------------------");
+        log.info("--------------------------- Authorization Code encryption Completed. ---------------------------");
         connection.close();
     }
 
