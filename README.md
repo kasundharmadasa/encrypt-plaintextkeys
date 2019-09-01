@@ -12,7 +12,7 @@ $ mvn clean install
   - start the server using following command.
   
   ```sh
-$ ./wso2server.sh -Dxencrypt 
+$ ./wso2server.sh -Dencrypt 
 ```
 ### Please note that the following tables are get affected.
 
